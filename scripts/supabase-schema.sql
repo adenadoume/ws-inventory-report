@@ -43,8 +43,8 @@ create table if not exists buys_2025 (
 create index if not exists idx_buys_code on buys_2025(code);
 create index if not exists idx_buys_sup on buys_2025(supplier);
 
--- 4. upload_history
-create table if not exists upload_history (
+-- 4. inv_upload_history (prefixed to avoid conflict with other apps in same Supabase project)
+create table if not exists inv_upload_history (
   id           uuid primary key default gen_random_uuid(),
   table_name   text not null,
   filename     text,
@@ -54,10 +54,10 @@ create table if not exists upload_history (
 );
 
 -- RLS: enable on all tables, allow authenticated users to read
-alter table inventory_items enable row level security;
-alter table sales_2025       enable row level security;
-alter table buys_2025        enable row level security;
-alter table upload_history   enable row level security;
+alter table inventory_items    enable row level security;
+alter table sales_2025         enable row level security;
+alter table buys_2025          enable row level security;
+alter table inv_upload_history enable row level security;
 
 create policy "Authenticated can read inventory" on inventory_items
   for select to authenticated using (true);
@@ -74,10 +74,10 @@ create policy "Authenticated can read buys" on buys_2025
 create policy "Authenticated can manage buys" on buys_2025
   for all to authenticated using (true) with check (true);
 
-create policy "Authenticated can read history" on upload_history
+create policy "Authenticated can read inv history" on inv_upload_history
   for select to authenticated using (true);
 
-create policy "Authenticated can insert history" on upload_history
+create policy "Authenticated can insert inv history" on inv_upload_history
   for insert to authenticated with check (true);
 
 -- Inventory is read-only for users (seeded by admin script)

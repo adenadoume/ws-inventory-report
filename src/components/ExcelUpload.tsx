@@ -53,7 +53,7 @@ export default function ExcelUpload({ table, label, onDone }: ExcelUploadProps) 
 
       // Log upload history
       const { data: { user } } = await supabase.auth.getUser()
-      await supabase.from('upload_history').insert({
+      await supabase.from('inv_upload_history').insert({
         table_name: table,
         filename: file.name,
         row_count: records.length,
