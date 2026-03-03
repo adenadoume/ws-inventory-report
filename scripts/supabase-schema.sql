@@ -1,7 +1,8 @@
 -- Run this in Supabase Dashboard → SQL Editor
+-- All tables prefixed with ws_ (ws-inventory-report app)
 
--- 1. inventory_items
-create table if not exists inventory_items (
+-- 1. ws_inventory_items
+create table if not exists ws_inventory_items (
   id           uuid primary key default gen_random_uuid(),
   code         text not null,
   description  text,
@@ -14,11 +15,11 @@ create table if not exists inventory_items (
   qty_changed  smallint default 0,
   cost_changed smallint default 0
 );
-create index if not exists idx_inv_code on inventory_items(code);
-create index if not exists idx_inv_supplier on inventory_items(supplier);
+create index if not exists idx_ws_inv_code on ws_inventory_items(code);
+create index if not exists idx_ws_inv_supplier on ws_inventory_items(supplier);
 
--- 2. sales_2025
-create table if not exists sales_2025 (
+-- 2. ws_sales_2025
+create table if not exists ws_sales_2025 (
   id           uuid primary key default gen_random_uuid(),
   code         text not null,
   description  text,
@@ -27,11 +28,11 @@ create table if not exists sales_2025 (
   value_sold   numeric default 0,
   uploaded_at  timestamptz default now()
 );
-create index if not exists idx_sales_code on sales_2025(code);
-create index if not exists idx_sales_sup on sales_2025(supplier);
+create index if not exists idx_ws_sales_code on ws_sales_2025(code);
+create index if not exists idx_ws_sales_sup on ws_sales_2025(supplier);
 
--- 3. buys_2025
-create table if not exists buys_2025 (
+-- 3. ws_buys_2025
+create table if not exists ws_buys_2025 (
   id           uuid primary key default gen_random_uuid(),
   code         text not null,
   description  text,
@@ -40,11 +41,11 @@ create table if not exists buys_2025 (
   value_bought numeric default 0,
   uploaded_at  timestamptz default now()
 );
-create index if not exists idx_buys_code on buys_2025(code);
-create index if not exists idx_buys_sup on buys_2025(supplier);
+create index if not exists idx_ws_buys_code on ws_buys_2025(code);
+create index if not exists idx_ws_buys_sup on ws_buys_2025(supplier);
 
--- 4. inv_upload_history (prefixed to avoid conflict with other apps in same Supabase project)
-create table if not exists inv_upload_history (
+-- 4. ws_upload_history
+create table if not exists ws_upload_history (
   id           uuid primary key default gen_random_uuid(),
   table_name   text not null,
   filename     text,
@@ -53,34 +54,34 @@ create table if not exists inv_upload_history (
   uploaded_by  text
 );
 
--- RLS: enable on all tables, allow authenticated users to read
-alter table inventory_items    enable row level security;
-alter table sales_2025         enable row level security;
-alter table buys_2025          enable row level security;
-alter table inv_upload_history enable row level security;
+-- RLS: enable on all tables, allow authenticated users to read/write
+alter table ws_inventory_items enable row level security;
+alter table ws_sales_2025      enable row level security;
+alter table ws_buys_2025       enable row level security;
+alter table ws_upload_history  enable row level security;
 
-create policy "Authenticated can read inventory" on inventory_items
+create policy "ws: authenticated read inventory" on ws_inventory_items
   for select to authenticated using (true);
 
-create policy "Authenticated can read sales" on sales_2025
+create policy "ws: authenticated read sales" on ws_sales_2025
   for select to authenticated using (true);
 
-create policy "Authenticated can manage sales" on sales_2025
+create policy "ws: authenticated manage sales" on ws_sales_2025
   for all to authenticated using (true) with check (true);
 
-create policy "Authenticated can read buys" on buys_2025
+create policy "ws: authenticated read buys" on ws_buys_2025
   for select to authenticated using (true);
 
-create policy "Authenticated can manage buys" on buys_2025
+create policy "ws: authenticated manage buys" on ws_buys_2025
   for all to authenticated using (true) with check (true);
 
-create policy "Authenticated can read inv history" on inv_upload_history
+create policy "ws: authenticated read upload history" on ws_upload_history
   for select to authenticated using (true);
 
-create policy "Authenticated can insert inv history" on inv_upload_history
+create policy "ws: authenticated insert upload history" on ws_upload_history
   for insert to authenticated with check (true);
 
--- Inventory is read-only for users (seeded by admin script)
--- To allow users to also import inventory via the app, add:
--- create policy "Authenticated can manage inventory" on inventory_items
+-- ws_inventory_items is read-only for users (seeded by admin script)
+-- To allow users to import inventory via the app, add:
+-- create policy "ws: authenticated manage inventory" on ws_inventory_items
 --   for all to authenticated using (true) with check (true);

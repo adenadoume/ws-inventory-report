@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
 
 interface ExcelUploadProps {
-  table: 'sales_2025' | 'buys_2025'
+  table: 'ws_sales_2025' | 'ws_buys_2025'
   label: string
   onDone?: (count: number) => void
 }
@@ -36,7 +36,7 @@ export default function ExcelUpload({ table, label, onDone }: ExcelUploadProps) 
         const qty = Number(row['Ποσότητα'] ?? row['qty'] ?? 0)
         const value = Number(row['Αξία'] ?? row['value'] ?? 0)
         const supplier = extractSupplier(description)
-        if (table === 'sales_2025') {
+        if (table === 'ws_sales_2025') {
           return { code, description, supplier, qty_sold: qty, value_sold: value }
         } else {
           return { code, description, supplier, qty_bought: qty, value_bought: value }
@@ -53,7 +53,7 @@ export default function ExcelUpload({ table, label, onDone }: ExcelUploadProps) 
 
       // Log upload history
       const { data: { user } } = await supabase.auth.getUser()
-      await supabase.from('inv_upload_history').insert({
+      await supabase.from('ws_upload_history').insert({
         table_name: table,
         filename: file.name,
         row_count: records.length,

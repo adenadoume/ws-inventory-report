@@ -67,7 +67,7 @@ export default function Poliseis({ items, loading, onRefresh }: Props) {
         showStatusFilters={false}
         extraRight={
           <ExcelUpload
-            table="sales_2025"
+            table="ws_sales_2025"
             label="Import ΠΩΛΗΣΕΙΣ"
             onDone={() => onRefresh()}
           />

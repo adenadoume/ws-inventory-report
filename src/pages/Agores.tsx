@@ -67,7 +67,7 @@ export default function Agores({ items, loading, onRefresh }: Props) {
         showStatusFilters={false}
         extraRight={
           <ExcelUpload
-            table="buys_2025"
+            table="ws_buys_2025"
             label="Import ΑΓΟΡΕΣ"
             onDone={() => onRefresh()}
           />

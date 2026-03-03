@@ -14,7 +14,7 @@ export function useBuys(refreshKey = 0) {
       let from = 0
       while (true) {
         const { data } = await supabase
-          .from('buys_2025')
+          .from('ws_buys_2025')
           .select('*')
           .range(from, from + 999)
           .order('code', { ascending: true })

@@ -17,7 +17,7 @@ export function useInventory() {
       const PAGE = 1000
       while (true) {
         const { data, error: err } = await supabase
-          .from('inventory_items')
+          .from('ws_inventory_items')
           .select('*')
           .range(from, from + PAGE - 1)
           .order('code', { ascending: true })

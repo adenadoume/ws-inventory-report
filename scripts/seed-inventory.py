@@ -55,11 +55,11 @@ def extract_data_array(html_path: str):
 
 
 def seed_inventory(sb, data):
-    """Insert inventory_items rows from DATA array."""
-    print("Seeding inventory_items…")
+    """Insert ws_inventory_items rows from DATA array."""
+    print("Seeding ws_inventory_items…")
 
     # Clear existing
-    sb.table("inventory_items").delete().neq("id", "00000000-0000-0000-0000-000000000000").execute()
+    sb.table("ws_inventory_items").delete().neq("id", "00000000-0000-0000-0000-000000000000").execute()
 
     records = []
     for row in data:
@@ -91,10 +91,10 @@ def seed_inventory(sb, data):
     total = len(records)
     for i in range(0, total, BATCH):
         batch = records[i:i + BATCH]
-        sb.table("inventory_items").insert(batch).execute()
+        sb.table("ws_inventory_items").insert(batch).execute()
         print(f"  Inserted {min(i + BATCH, total)}/{total}")
 
-    print(f"  ✓ inventory_items: {total} rows")
+    print(f"  ✓ ws_inventory_items: {total} rows")
 
 
 def seed_excel(sb, table: str, path: str, qty_col: str, val_col: str):
@@ -145,10 +145,10 @@ def main():
     seed_inventory(sb, data)
 
     # 2. Sales
-    seed_excel(sb, "sales_2025", SALES_PATH, "qty_sold", "value_sold")
+    seed_excel(sb, "ws_sales_2025", SALES_PATH, "qty_sold", "value_sold")
 
     # 3. Buys
-    seed_excel(sb, "buys_2025", BUYS_PATH, "qty_bought", "value_bought")
+    seed_excel(sb, "ws_buys_2025", BUYS_PATH, "qty_bought", "value_bought")
 
     print("\n✅ All done! Supabase is ready.")
 
