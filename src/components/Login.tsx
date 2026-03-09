@@ -18,7 +18,7 @@ export default function Login() {
 
   return (
     <div className="login-wrap">
-      <form className="login-box" onSubmit={handleLogin}>
+      <form className="login-box animate-slide-up" onSubmit={handleLogin}>
         <h2>⚖ ΑΠΟΓΡΑΦΗ</h2>
         <div className="sub">Σύνδεση στο σύστημα απογραφής</div>
         <label>Email</label>

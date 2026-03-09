@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { InventoryItem } from '../types'
 
-export function useInventory() {
+export function useInventory(refreshKey = 0) {
   const [items, setItems] = useState<InventoryItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -21,17 +21,22 @@ export function useInventory() {
           .select('*')
           .range(from, from + PAGE - 1)
           .order('code', { ascending: true })
-        if (err) { setError(err.message); break }
+        if (err) {
+          if (!cancelled) { setError(err.message); setItems([]); setLoading(false) }
+          return
+        }
         if (!data || data.length === 0) break
         all.push(...(data as InventoryItem[]))
         if (data.length < PAGE) break
         from += PAGE
       }
-      if (!cancelled) { setItems(all); setLoading(false) }
+      if (!cancelled) { setItems(all); setError(null); setLoading(false) }
     }
-    load()
+    load().catch(e => {
+      if (!cancelled) { setError(String(e)); setItems([]); setLoading(false) }
+    })
     return () => { cancelled = true }
-  }, [])
+  }, [refreshKey])
 
   return { items, loading, error }
 }

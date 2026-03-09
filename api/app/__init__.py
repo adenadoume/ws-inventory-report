@@ -1,0 +1,1 @@
+# ws-inventory-report API

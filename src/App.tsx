@@ -21,6 +21,7 @@ export default function App() {
   const [tab, setTab] = useState<TabView>('apografi')
   const [salesKey, setSalesKey] = useState(0)
   const [buysKey, setBuysKey] = useState(0)
+  const [invKey, setInvKey] = useState(0)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -28,7 +29,7 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  const { items: inventory, loading: invLoading } = useInventory()
+  const { items: inventory, loading: invLoading, error: invError } = useInventory(invKey)
   const { items: sales, loading: salesLoading } = useSales(salesKey)
   const { items: buys, loading: buysLoading } = useBuys(buysKey)
 
@@ -42,8 +43,7 @@ export default function App() {
 
   return (
     <div className="app-root">
-      {/* HEADER */}
-      <div id="header">
+      <header id="header" className="animate-fade-in">
         <div>
           <h1>⚖ ΑΠΟΓΡΑΦΗ ΑΠΟΘΕΜΑΤΟΣ — 2024 vs 2025</h1>
           {!invLoading && (
@@ -76,11 +76,16 @@ export default function App() {
             title="Αποσύνδεση"
           >⏻</button>
         </div>
-      </div>
+      </header>
 
-      {/* PAGE CONTENT */}
+      <main className="app-main">
+      {invError && (
+        <div className="app-error-banner" role="alert">
+          Σφάλμα δεδομένων: {invError}
+        </div>
+      )}
       {tab === 'apografi' && (
-        <StokApografi items={inventory} loading={invLoading} />
+        <StokApografi items={inventory} loading={invLoading} onRefresh={() => setInvKey(k => k + 1)} />
       )}
       {tab === 'formula' && (
         <StokFormula
@@ -104,6 +109,7 @@ export default function App() {
           onRefresh={() => setSalesKey(k => k + 1)}
         />
       )}
+      </main>
     </div>
   )
 }

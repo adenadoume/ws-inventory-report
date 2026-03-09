@@ -10,7 +10,8 @@
     "baseUrl": ".",
     "paths": {
       "xlsx": ["../../node_modules/xlsx/types/index.d.ts"],
-      "exceljs": ["../../node_modules/exceljs/index.d.ts"]
+      "exceljs": ["../../node_modules/exceljs/index.d.ts"],
+      "@supabase/supabase-js": ["../../node_modules/@supabase/supabase-js/dist/index.d.cts"]
     },
 
     /* Bundler mode */

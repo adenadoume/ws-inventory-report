@@ -63,7 +63,9 @@ export default function ExcelUpload({ table, label, onDone }: ExcelUploadProps) 
       setLastUpload(`${records.length} εγγραφές — ${file.name}`)
       onDone?.(records.length)
     } catch (err) {
-      alert('Σφάλμα ανάγνωσης αρχείου: ' + String(err))
+      const msg = err instanceof Error ? err.message : (err && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message) : String(err))
+      console.error('Excel upload error:', err)
+      alert('Σφάλμα ανάγνωσης αρχείου: ' + msg)
     } finally {
       setLoading(false)
       if (inputRef.current) inputRef.current.value = ''

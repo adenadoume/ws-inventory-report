@@ -45,4 +45,4 @@ export type TabView = 'apografi' | 'formula' | 'agores' | 'poliseis'
 
 export type FilterStatus = 'all' | 'missing' | 'new' | 'changed' | 'same'
 
-export type SortMode = 'code' | 'cost'
+export type SortMode = 'code' | 'cost' | 'diff-desc' | 'diff-asc'
