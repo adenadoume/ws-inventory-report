@@ -7,6 +7,8 @@ import ImportApografiModal from '../components/ImportApografiModal'
 import { useBuys } from '../hooks/useBuys'
 import { useSales } from '../hooks/useSales'
 import ItemHistoryModal from '../components/ItemHistoryModal'
+import UploadHistoryPanel from '../components/UploadHistoryPanel'
+import { supabase } from '../lib/supabase'
 
 interface Props {
   items: InventoryItem[]
@@ -25,6 +27,7 @@ export default function StokApografi({ items, loading, onRefresh }: Props) {
   const [sort, setSort] = useState<SortMode>('code')
   const [codeInitial, setCodeInitial] = useState('WS')
   const [importModalOpen, setImportModalOpen] = useState(false)
+  const [historyModalOpen, setHistoryModalOpen] = useState(false)
   const [selectedCode, setSelectedCode] = useState<string | null>(null)
   const wrap25Ref = useRef<HTMLDivElement>(null)
   const wrap24Ref = useRef<HTMLDivElement>(null)
@@ -219,6 +222,42 @@ export default function StokApografi({ items, loading, onRefresh }: Props) {
     URL.revokeObjectURL(url)
   }
 
+  const handleRestoreSnapshot = async (tableName: string, snapshotData: any[]) => {
+    if (tableName !== 'ws_inventory_items') {
+      alert('Το snapshot που επιλέξατε δεν ανήκει στην Απογραφή (ws_inventory_items).')
+      return
+    }
+
+    // Warn the user that we are directly updating the database table 
+    // to match this snapshot 1:1.
+    const run = confirm(`Επαναφορά ${snapshotData.length} γραμμών στην βάση δεδομένων;\n\nΑυτό θα διαγράψει τα τωρινά δεδομένα Απογραφής και θα βάλει αυτά του Snapshot.`)
+    if (!run) return
+
+    try {
+      // 1. Wipe existing
+      await supabase.from('ws_inventory_items').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+
+      // 2. Insert snapshot exactly as it was
+      const BATCH = 200
+      for (let i = 0; i < snapshotData.length; i += BATCH) {
+        // Remove the specific ID if we want to let PG auto-assign, but 
+        // to maintain exact snapshot, we can technically keep it, but it's 
+        // safer to strip IDs so we don't get exact-conflict.
+        const chunk = snapshotData.slice(i, i + BATCH).map(row => {
+          const { id, ...rest } = row
+          return rest
+        })
+        const { error } = await supabase.from('ws_inventory_items').insert(chunk)
+        if (error) throw error
+      }
+
+      alert('Επιτυχής επαναφορά Snapshot!')
+      onRefresh?.()
+    } catch (e: any) {
+      alert('Σφάλμα επαναφοράς: ' + e.message)
+    }
+  }
+
   if (loading) return (
     <div className="loading-state">
       <span className="loading-state-inner">Φόρτωση δεδομένων…</span>
@@ -260,6 +299,14 @@ export default function StokApografi({ items, loading, onRefresh }: Props) {
               >
                 {importModalOpen ? '▼ ' : '⬆ '}Import Excel
               </button>
+              <button
+                type="button"
+                className={`filter-btn${historyModalOpen ? ' active' : ''}`}
+                onClick={() => setHistoryModalOpen(true)}
+                style={{ background: '#3B82F6', borderColor: '#2563EB', color: '#FFF' }}
+              >
+                🕒 Ιστορικό / Snapshots
+              </button>
               <button type="button" id="btn-download" className="filter-btn" onClick={downloadExcel} title="Λήψη Excel">
                 ⬇ Excel
               </button>
@@ -272,6 +319,12 @@ export default function StokApografi({ items, loading, onRefresh }: Props) {
         open={importModalOpen}
         onClose={() => setImportModalOpen(false)}
         onDone={onRefresh}
+      />
+
+      <UploadHistoryPanel
+        open={historyModalOpen}
+        onClose={() => setHistoryModalOpen(false)}
+        onRestoreSnapshot={handleRestoreSnapshot}
       />
 
       {/* Legend (exactly as APOGRAFI_DIFF) */}

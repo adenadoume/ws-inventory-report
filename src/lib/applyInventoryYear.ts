@@ -133,6 +133,7 @@ export async function applyInventoryYear(
     filename: filename ?? `${year}_import`,
     row_count: parsed.length,
     uploaded_by: user?.email ?? 'unknown',
+    data_payload: parsed, // Save the exact uploaded snapshot
   })
 }
 
@@ -203,5 +204,6 @@ export async function applyInventoryMerge(
     filename: filenameLabel ?? 'import_2024_2025',
     row_count: allCodes.length,
     uploaded_by: user?.email ?? 'unknown',
+    data_payload: toInsert, // Save the snapshot of merged data
   })
 }

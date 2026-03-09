@@ -3,6 +3,8 @@ import type { InventoryItem, SalesItem, BuysItem, FilterStatus, SortMode } from 
 import StatCard from '../components/StatCard'
 import FiltersBar from '../components/FiltersBar'
 import ItemHistoryModal from '../components/ItemHistoryModal'
+import UploadHistoryPanel from '../components/UploadHistoryPanel'
+import { supabase } from '../lib/supabase'
 
 interface Props {
   items: InventoryItem[]
@@ -26,6 +28,7 @@ export default function StokFormula({ items, sales, buys, loading }: Props) {
   const [filter, setFilter] = useState<FilterStatus>('all')
   const [sort, setSort] = useState<SortMode>('code')
   const [codeInitial, setCodeInitial] = useState('WS')
+  const [historyModalOpen, setHistoryModalOpen] = useState(false)
   const [selectedCode, setSelectedCode] = useState<string | null>(null)
 
   // Build lookup maps
@@ -53,7 +56,7 @@ export default function StokFormula({ items, sales, buys, loading }: Props) {
       const q24 = inv.q_2024 ?? 0
       const expectedQ25 = q24 + qtyBought - qtySold
       const actualQ25 = inv.q_2025 ?? null
-      const hasDiff = actualQ25 != null && Math.abs(actualQ25 - expectedQ25) > 0.001
+      const hasDiff = (actualQ25 != null && Math.abs(actualQ25 - expectedQ25) > 0.001) || inv.status === 'missing'
       return { ...inv, qtySold, valSold, qtyBought, valBought, expectedQ25, actualQ25, hasDiff }
     })
   }, [items, salesMap, buysMap])
@@ -82,6 +85,7 @@ export default function StokFormula({ items, sales, buys, loading }: Props) {
   // Aggregate stats
   const totalSalesEur = useMemo(() => baseFiltered.reduce((s, i) => s + (i.valSold || 0), 0), [baseFiltered])
   const totalBuysEur = useMemo(() => baseFiltered.reduce((s, i) => s + (i.valBought || 0), 0), [baseFiltered])
+  const totalStock24Eur = useMemo(() => baseFiltered.reduce((s, i) => s + (i.cost_2024 || 0), 0), [baseFiltered])
 
   // Expected Αξία 2025 & Diff Total: We must iterate over all unique codes across all three feeds.
   const { expectedAxia, diffAxiaTotal } = useMemo(() => {
@@ -147,8 +151,8 @@ export default function StokFormula({ items, sales, buys, loading }: Props) {
     } else if (sort === 'cost') {
       // Sort by absolute diff descending (biggest discrepancies first)
       rows = [...rows].sort((a, b) => {
-        const da = a.actualQ25 != null ? Math.abs(a.actualQ25 - a.expectedQ25) : 0
-        const db = b.actualQ25 != null ? Math.abs(b.actualQ25 - b.expectedQ25) : 0
+        const da = a.actualQ25 != null ? Math.abs(a.actualQ25 - a.expectedQ25) : (a.status === 'missing' ? a.expectedQ25 : 0)
+        const db = b.actualQ25 != null ? Math.abs(b.actualQ25 - b.expectedQ25) : (b.status === 'missing' ? b.expectedQ25 : 0)
 
         let unitCostA = 0
         if (a.q_2025 && a.q_2025 > 0 && a.cost_2025) unitCostA = a.cost_2025 / a.q_2025
@@ -165,8 +169,8 @@ export default function StokFormula({ items, sales, buys, loading }: Props) {
       })
     } else if (sort === 'diff-desc' || sort === 'diff-asc') {
       rows = [...rows].sort((a, b) => {
-        const da = a.actualQ25 != null ? (a.actualQ25 - a.expectedQ25) : null
-        const db = b.actualQ25 != null ? (b.actualQ25 - b.expectedQ25) : null
+        const da = a.actualQ25 != null ? (a.actualQ25 - a.expectedQ25) : (a.status === 'missing' ? -a.expectedQ25 : null)
+        const db = b.actualQ25 != null ? (b.actualQ25 - b.expectedQ25) : (b.status === 'missing' ? -b.expectedQ25 : null)
 
         let unitCostA = 0
         if (a.q_2025 && a.q_2025 > 0 && a.cost_2025) unitCostA = a.cost_2025 / a.q_2025
@@ -189,6 +193,34 @@ export default function StokFormula({ items, sales, buys, loading }: Props) {
     return rows
   }, [baseFiltered, filter, sort])
 
+  const handleRestoreSnapshot = async (tableName: string, snapshotData: any[]) => {
+    if (tableName !== 'ws_inventory_items') {
+      alert('Το snapshot που επιλέξατε δεν ανήκει στην Απογραφή (ws_inventory_items).')
+      return
+    }
+    const run = confirm(`Επαναφορά ${snapshotData.length} γραμμών στην βάση δεδομένων;\n\nΑυτό θα διαγράψει τα τωρινά δεδομένα Απογραφής και θα βάλει αυτά του Snapshot. (Απαιτείται ανανέωση της σελίδας μετά)`)
+    if (!run) return
+
+    try {
+      await supabase.from('ws_inventory_items').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+
+      const BATCH = 200
+      for (let i = 0; i < snapshotData.length; i += BATCH) {
+        const chunk = snapshotData.slice(i, i + BATCH).map((row: any) => {
+          const { id, ...rest } = row
+          return rest
+        })
+        const { error } = await supabase.from('ws_inventory_items').insert(chunk)
+        if (error) throw error
+      }
+
+      alert('Επιτυχής επαναφορά Snapshot! Παρακαλώ ανανεώστε τη σελίδα (F5).')
+      window.location.reload()
+    } catch (e: any) {
+      alert('Σφάλμα επαναφοράς: ' + e.message)
+    }
+  }
+
   if (loading) return (
     <div className="loading-state">
       <span className="loading-state-inner">Φόρτωση δεδομένων…</span>
@@ -199,6 +231,7 @@ export default function StokFormula({ items, sales, buys, loading }: Props) {
     <>
       {/* Stat cards */}
       <div className="cards stagger-children">
+        <StatCard value={fmtEur(totalStock24Eur)} label="Αξία Αποθ. 2024" color="purple" />
         <StatCard value={fmtEur(totalSalesEur)} label="Σύνολο Πωλήσεων €" color="red" />
         <StatCard value={fmtEur(totalBuysEur)} label="Σύνολο Αγορών €" color="green" />
         <StatCard value={fmtEur(expectedAxia)} label="Expected Αξία Αποθ. 2025" color="violet" />
@@ -216,8 +249,24 @@ export default function StokFormula({ items, sales, buys, loading }: Props) {
           sort={sort === 'diff-desc' || sort === 'diff-asc' ? 'cost' : sort} onSort={v => setSort(v === 'cost' ? 'cost' : 'code')}
           countLabel={`${filtered.length.toLocaleString('el-GR')} κωδικοί`}
           showStatusFilters
+          extraRight={
+            <button
+              type="button"
+              className={`filter-btn${historyModalOpen ? ' active' : ''}`}
+              onClick={() => setHistoryModalOpen(true)}
+              style={{ background: '#3B82F6', borderColor: '#2563EB', color: '#FFF' }}
+            >
+              🕒 Ιστορικό / Snapshots
+            </button>
+          }
         />
       </div>
+
+      <UploadHistoryPanel
+        open={historyModalOpen}
+        onClose={() => setHistoryModalOpen(false)}
+        onRestoreSnapshot={handleRestoreSnapshot}
+      />
 
       {/* Single panel */}
       <div className="animate-slide-up single-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -246,7 +295,7 @@ export default function StokFormula({ items, sales, buys, loading }: Props) {
             </thead>
             <tbody>
               {filtered.map(r => {
-                const diff = r.actualQ25 != null ? (r.actualQ25 - r.expectedQ25) : null
+                const diff = r.actualQ25 != null ? (r.actualQ25 - r.expectedQ25) : (r.status === 'missing' ? -r.expectedQ25 : null)
                 const rowBg = r.hasDiff
                   ? (diff != null && diff < 0 ? '#3D0A0A' : '#3D2000')
                   : (r.actualQ25 != null ? '#0A1A0A' : '#131E2A')
@@ -267,7 +316,8 @@ export default function StokFormula({ items, sales, buys, loading }: Props) {
                     <td className="c-num" style={{ color: '#DDA0DD', fontWeight: 700 }}>{fmtQty(r.expectedQ25)}</td>
                     <td className="c-num" style={{ color: r.hasDiff ? '#FFD700' : '#86EFAC', fontWeight: r.hasDiff ? 700 : 400 }}>
                       {fmtQty(r.actualQ25)}
-                      {r.hasDiff && diff != null && (
+                      {r.status === 'missing' && <span style={{ fontSize: 13, marginLeft: 4, color: '#FCA5A5' }}>(ΑΠΟΥΣΙΑ)</span>}
+                      {r.status !== 'missing' && r.hasDiff && diff != null && (
                         <span style={{ fontSize: 13, marginLeft: 4, color: diff < 0 ? '#FCA5A5' : '#86EFAC' }}>
                           ({diff > 0 ? '+' : ''}{fmtQty(diff)})
                         </span>

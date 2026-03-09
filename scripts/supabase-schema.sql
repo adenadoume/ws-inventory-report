@@ -44,14 +44,15 @@ create table if not exists ws_buys_2025 (
 create index if not exists idx_ws_buys_code on ws_buys_2025(code);
 create index if not exists idx_ws_buys_sup on ws_buys_2025(supplier);
 
--- 4. ws_upload_history
+-- 4. ws_upload_history (NEW: data_payload JSONB column)
 create table if not exists ws_upload_history (
   id           uuid primary key default gen_random_uuid(),
   table_name   text not null,
   filename     text,
   row_count    int,
   uploaded_at  timestamptz default now(),
-  uploaded_by  text
+  uploaded_by  text,
+  data_payload jsonb
 );
 
 -- 5. ws_inventory_adjustments (Phase 2: corrections for Jan–Feb 2026)

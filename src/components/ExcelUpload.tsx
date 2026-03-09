@@ -58,6 +58,7 @@ export default function ExcelUpload({ table, label, onDone }: ExcelUploadProps) 
         filename: file.name,
         row_count: records.length,
         uploaded_by: user?.email ?? 'unknown',
+        data_payload: records, // Store the exact uploaded snapshot
       })
 
       setLastUpload(`${records.length} εγγραφές — ${file.name}`)
