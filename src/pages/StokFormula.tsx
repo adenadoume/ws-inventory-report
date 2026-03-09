@@ -4,7 +4,7 @@ import StatCard from '../components/StatCard'
 import FiltersBar from '../components/FiltersBar'
 import ItemHistoryModal from '../components/ItemHistoryModal'
 import UploadHistoryPanel from '../components/UploadHistoryPanel'
-import { supabase } from '../lib/supabase'
+import { restoreMasterSnapshot } from '../lib/snapshot'
 
 interface Props {
   items: InventoryItem[]
@@ -193,28 +193,12 @@ export default function StokFormula({ items, sales, buys, loading }: Props) {
     return rows
   }, [baseFiltered, filter, sort])
 
-  const handleRestoreSnapshot = async (tableName: string, snapshotData: any[]) => {
-    if (tableName !== 'ws_inventory_items') {
-      alert('Το snapshot που επιλέξατε δεν ανήκει στην Απογραφή (ws_inventory_items).')
-      return
-    }
-    const run = confirm(`Επαναφορά ${snapshotData.length} γραμμών στην βάση δεδομένων;\n\nΑυτό θα διαγράψει τα τωρινά δεδομένα Απογραφής και θα βάλει αυτά του Snapshot. (Απαιτείται ανανέωση της σελίδας μετά)`)
-    if (!run) return
+  const handleRestoreSnapshot = async (tableName: string, snapshotData: any) => {
+    if (tableName !== 'master_snapshot') return
 
     try {
-      await supabase.from('ws_inventory_items').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-
-      const BATCH = 200
-      for (let i = 0; i < snapshotData.length; i += BATCH) {
-        const chunk = snapshotData.slice(i, i + BATCH).map((row: any) => {
-          const { id, ...rest } = row
-          return rest
-        })
-        const { error } = await supabase.from('ws_inventory_items').insert(chunk)
-        if (error) throw error
-      }
-
-      alert('Επιτυχής επαναφορά Snapshot! Παρακαλώ ανανεώστε τη σελίδα (F5).')
+      await restoreMasterSnapshot(snapshotData)
+      alert('Επιτυχής επαναφορά Master Snapshot! Παρακαλώ ανανεώστε τη σελίδα (F5).')
       window.location.reload()
     } catch (e: any) {
       alert('Σφάλμα επαναφοράς: ' + e.message)

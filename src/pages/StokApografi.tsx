@@ -8,7 +8,7 @@ import { useBuys } from '../hooks/useBuys'
 import { useSales } from '../hooks/useSales'
 import ItemHistoryModal from '../components/ItemHistoryModal'
 import UploadHistoryPanel from '../components/UploadHistoryPanel'
-import { supabase } from '../lib/supabase'
+import { restoreMasterSnapshot } from '../lib/snapshot'
 
 interface Props {
   items: InventoryItem[]
@@ -222,36 +222,12 @@ export default function StokApografi({ items, loading, onRefresh }: Props) {
     URL.revokeObjectURL(url)
   }
 
-  const handleRestoreSnapshot = async (tableName: string, snapshotData: any[]) => {
-    if (tableName !== 'ws_inventory_items') {
-      alert('Το snapshot που επιλέξατε δεν ανήκει στην Απογραφή (ws_inventory_items).')
-      return
-    }
-
-    // Warn the user that we are directly updating the database table 
-    // to match this snapshot 1:1.
-    const run = confirm(`Επαναφορά ${snapshotData.length} γραμμών στην βάση δεδομένων;\n\nΑυτό θα διαγράψει τα τωρινά δεδομένα Απογραφής και θα βάλει αυτά του Snapshot.`)
-    if (!run) return
+  const handleRestoreSnapshot = async (tableName: string, snapshotData: any) => {
+    if (tableName !== 'master_snapshot') return
 
     try {
-      // 1. Wipe existing
-      await supabase.from('ws_inventory_items').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-
-      // 2. Insert snapshot exactly as it was
-      const BATCH = 200
-      for (let i = 0; i < snapshotData.length; i += BATCH) {
-        // Remove the specific ID if we want to let PG auto-assign, but 
-        // to maintain exact snapshot, we can technically keep it, but it's 
-        // safer to strip IDs so we don't get exact-conflict.
-        const chunk = snapshotData.slice(i, i + BATCH).map(row => {
-          const { id, ...rest } = row
-          return rest
-        })
-        const { error } = await supabase.from('ws_inventory_items').insert(chunk)
-        if (error) throw error
-      }
-
-      alert('Επιτυχής επαναφορά Snapshot!')
+      await restoreMasterSnapshot(snapshotData)
+      alert('Επιτυχής επαναφορά Master Snapshot!')
       onRefresh?.()
     } catch (e: any) {
       alert('Σφάλμα επαναφοράς: ' + e.message)

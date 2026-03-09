@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { UploadHistory } from '../types'
+import { createMasterSnapshot } from '../lib/snapshot'
 
 interface Props {
     open: boolean
@@ -26,6 +27,7 @@ export default function UploadHistoryPanel({ open, onClose, onRestoreSnapshot }:
         const { data, error } = await supabase
             .from('ws_upload_history')
             .select('*')
+            .eq('table_name', 'master_snapshot')
             .order('uploaded_at', { ascending: false })
             .limit(50)
 
@@ -40,10 +42,24 @@ export default function UploadHistoryPanel({ open, onClose, onRestoreSnapshot }:
             alert('Αυτή η εγγραφή δεν περιέχει αποθηκευμένα δεδομένα (data_payload είναι κενό).')
             return
         }
-        if (confirm(`Είστε σίγουροι ότι θέλετε να φορτώσετε την εγγραφή "${item.filename}" (${item.row_count} γραμμές);\n\nΑυτό θα αντικαταστήσει τα δεδομένα που βλέπετε αυτή τη στιγμή (χωρίς όμως να τα διαγράψει από τη βάση).`)) {
+        if (confirm(`Είστε σίγουροι ότι θέλετε να φορτώσετε το snapshot "${item.filename}";\n\nΑυτό θα διαγράψει τα τρέχοντα δεδομένα (Απογραφή, Αγορές, Πωλήσεις) και θα τα αντικαταστήσει πλήρως με τα δεδομένα του snapshot.`)) {
             onRestoreSnapshot(item.table_name, item.data_payload)
             onClose()
         }
+    }
+
+    const handleTakeSnapshot = async () => {
+        const name = prompt('Δώστε όνομα για το νέο Snapshot (π.χ. "Απογραφή 2024 Final"):')
+        if (!name) return
+        setLoading(true)
+        try {
+            await createMasterSnapshot(name)
+            await loadHistory()
+            alert('Το Snapshot δημιουργήθηκε επιτυχώς!')
+        } catch (e: any) {
+            alert('Σφάλμα: ' + e.message)
+        }
+        setLoading(false)
     }
 
     const handleDelete = async (id: string, filename: string) => {
@@ -103,9 +119,22 @@ export default function UploadHistoryPanel({ open, onClose, onRestoreSnapshot }:
                 background: '#111115'
             }}>
                 <h2 style={{ fontSize: '16px', margin: 0 }}>Ιστορικό Uploads (Snapshots)</h2>
-                <button onClick={onClose} style={{
-                    background: 'transparent', border: 'none', color: '#A8C8E8', fontSize: '20px', cursor: 'pointer'
-                }}>✕</button>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <button
+                        onClick={handleTakeSnapshot}
+                        disabled={loading}
+                        style={{
+                            background: '#10B981', color: '#FFF', border: 'none',
+                            padding: '6px 12px', borderRadius: '4px', cursor: 'pointer',
+                            fontSize: '13px', fontWeight: 'bold'
+                        }}
+                    >
+                        📸 Νέο Snapshot
+                    </button>
+                    <button onClick={onClose} style={{
+                        background: 'transparent', border: 'none', color: '#A8C8E8', fontSize: '20px', cursor: 'pointer'
+                    }}>✕</button>
+                </div>
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
@@ -138,8 +167,7 @@ export default function UploadHistoryPanel({ open, onClose, onRestoreSnapshot }:
                                     </div>
                                 </div>
                                 <div style={{ fontSize: '12px', color: '#D1D5DB' }}>
-                                    Πίνακας: <code>{h.table_name}</code><br />
-                                    Γραμμές: <strong>{h.row_count}</strong><br />
+                                    Συνολικές Γραμμές: <strong>{h.row_count}</strong><br />
                                     Χρήστης: {h.uploaded_by}
                                 </div>
 
