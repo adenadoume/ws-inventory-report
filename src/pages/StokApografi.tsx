@@ -78,6 +78,25 @@ export default function StokApografi({ items, loading, onRefresh }: Props) {
     }
   }, [baseFiltered])
 
+  // Sales/buys totals over ALL codes (not just inventory-matched)
+  const { totalSalesEur, totalBuysEur } = useMemo(() => {
+    let sEur = 0
+    let bEur = 0
+    for (const s of sales as any[]) {
+      const code: string = s.code
+      if (codeInitial === 'WS' && code.toUpperCase().localeCompare('W') >= 0) continue
+      if (codeInitial !== '' && codeInitial !== 'WS' && !code.toUpperCase().startsWith(codeInitial)) continue
+      sEur += s.value_sold
+    }
+    for (const b of buys as any[]) {
+      const code: string = b.code
+      if (codeInitial === 'WS' && code.toUpperCase().localeCompare('W') >= 0) continue
+      if (codeInitial !== '' && codeInitial !== 'WS' && !code.toUpperCase().startsWith(codeInitial)) continue
+      bEur += b.value_bought
+    }
+    return { totalSalesEur: sEur, totalBuysEur: bEur }
+  }, [sales, buys, codeInitial])
+
   // Compute total Expected Value for the whole DB to show on top
   const { totalExpectedValue, globalDiffValue } = useMemo(() => {
     const bMap = new Map<string, number>()
@@ -247,6 +266,8 @@ export default function StokApografi({ items, loading, onRefresh }: Props) {
       {/* Stat cards */}
       <div className="cards stagger-children">
         <StatCard value={fmtEur(stats.tot24)} label={`Απογραφή ${oldYear}`} color="purple" />
+        <StatCard value={fmtEur(totalSalesEur)} label="Σύνολο Πωλήσεων €" color="red" />
+        <StatCard value={fmtEur(totalBuysEur)} label="Σύνολο Αγορών €" color="green" />
         <StatCard value={fmtEur(totalExpectedValue)} label={`Θεωρητική Απογραφή ${newYear}`} color="blue" />
         <StatCard value={fmtEur(stats.tot25)} label={`Απογραφή ${newYear}`} color="purple" />
         <StatCard value={(globalDiffValue > 0 ? '+' : '') + fmtEur(globalDiffValue)} label="Σύνολο Διαφοράς €" color={globalDiffValue >= 0 ? 'green' : 'red'} />

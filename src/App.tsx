@@ -63,7 +63,7 @@ export default function App() {
           <button
             className={`tab-btn t-formula${tab === 'formula' ? ' active' : ''}`}
             onClick={() => setTab('formula')}
-          >ΣΤΟΚ − ΑΓΟΡΕΣ + ΠΩΛΗΣΕΙΣ</button>
+          >ΣΤΟΚ - ΘΕΩΡΗΤΙΚΗ ΑΠΟΓΡΑΦΗ</button>
           <button
             className={`tab-btn t-agores${tab === 'agores' ? ' active' : ''}`}
             onClick={() => setTab('agores')}

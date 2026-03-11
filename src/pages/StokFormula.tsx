@@ -84,9 +84,23 @@ export default function StokFormula({ items, sales, buys, loading }: Props) {
     [...new Set(items.map(i => i.supplier).filter(Boolean))].sort()
     , [items])
 
-  // Aggregate stats
-  const totalSalesEur = useMemo(() => baseFiltered.reduce((s, i) => s + (i.valSold || 0), 0), [baseFiltered])
-  const totalBuysEur = useMemo(() => baseFiltered.reduce((s, i) => s + (i.valBought || 0), 0), [baseFiltered])
+  // Aggregate stats — sales/buys totals must cover ALL codes, not just inventory-matched rows
+  const { totalSalesEur, totalBuysEur } = useMemo(() => {
+    let sEur = 0
+    let bEur = 0
+    for (const [code, s] of salesMap) {
+      if (codeInitial === 'WS' && code.toUpperCase().localeCompare('W') >= 0) continue
+      if (codeInitial !== '' && codeInitial !== 'WS' && !code.toUpperCase().startsWith(codeInitial)) continue
+      sEur += s.value_sold
+    }
+    for (const [code, b] of buysMap) {
+      if (codeInitial === 'WS' && code.toUpperCase().localeCompare('W') >= 0) continue
+      if (codeInitial !== '' && codeInitial !== 'WS' && !code.toUpperCase().startsWith(codeInitial)) continue
+      bEur += b.value_bought
+    }
+    return { totalSalesEur: sEur, totalBuysEur: bEur }
+  }, [salesMap, buysMap, codeInitial])
+
   const totalStock24Eur = useMemo(() => baseFiltered.reduce((s, i) => s + (i.cost_2024 || 0), 0), [baseFiltered])
   const totalStock25Eur = useMemo(() => baseFiltered.reduce((s, i) => s + (i.cost_2025 || 0), 0), [baseFiltered])
 
