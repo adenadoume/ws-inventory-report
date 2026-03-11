@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { getNewYearTableName } from './yearConfig'
 import type { InventoryItem, SalesItem, BuysItem } from '../types'
 
 export interface MasterSnapshotPayload {
@@ -9,6 +10,9 @@ export interface MasterSnapshotPayload {
 
 export async function createMasterSnapshot(name: string): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser()
+
+    const salesTable = getNewYearTableName('sales')
+    const buysTable = getNewYearTableName('buys')
 
     // 1. Fetch all Inventory
     const inventory: InventoryItem[] = []
@@ -25,7 +29,7 @@ export async function createMasterSnapshot(name: string): Promise<void> {
     const sales: SalesItem[] = []
     from = 0
     while (true) {
-        const { data } = await supabase.from('ws_sales_2025').select('*').range(from, from + 999)
+        const { data } = await supabase.from(salesTable).select('*').range(from, from + 999)
         if (!data || data.length === 0) break
         sales.push(...(data as SalesItem[]))
         if (data.length < 1000) break
@@ -36,7 +40,7 @@ export async function createMasterSnapshot(name: string): Promise<void> {
     const buys: BuysItem[] = []
     from = 0
     while (true) {
-        const { data } = await supabase.from('ws_buys_2025').select('*').range(from, from + 999)
+        const { data } = await supabase.from(buysTable).select('*').range(from, from + 999)
         if (!data || data.length === 0) break
         buys.push(...(data as BuysItem[]))
         if (data.length < 1000) break
@@ -58,11 +62,14 @@ export async function createMasterSnapshot(name: string): Promise<void> {
 }
 
 export async function restoreMasterSnapshot(payload: MasterSnapshotPayload): Promise<void> {
+    const salesTable = getNewYearTableName('sales')
+    const buysTable = getNewYearTableName('buys')
+
     // Wipe all tables
     await Promise.all([
         supabase.from('ws_inventory_items').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-        supabase.from('ws_sales_2025').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-        supabase.from('ws_buys_2025').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+        supabase.from(salesTable).delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+        supabase.from(buysTable).delete().neq('id', '00000000-0000-0000-0000-000000000000'),
     ])
 
     // Insert batches
@@ -81,7 +88,7 @@ export async function restoreMasterSnapshot(payload: MasterSnapshotPayload): Pro
     for (let i = 0; i < payload.sales.length; i += BATCH) {
         const chunk = payload.sales.slice(i, i + BATCH).map(({ id, ...rest }) => rest)
         if (chunk.length > 0) {
-            const { error } = await supabase.from('ws_sales_2025').insert(chunk)
+            const { error } = await supabase.from(salesTable).insert(chunk)
             if (error) throw error
         }
     }
@@ -90,7 +97,7 @@ export async function restoreMasterSnapshot(payload: MasterSnapshotPayload): Pro
     for (let i = 0; i < payload.buys.length; i += BATCH) {
         const chunk = payload.buys.slice(i, i + BATCH).map(({ id, ...rest }) => rest)
         if (chunk.length > 0) {
-            const { error } = await supabase.from('ws_buys_2025').insert(chunk)
+            const { error } = await supabase.from(buysTable).insert(chunk)
             if (error) throw error
         }
     }

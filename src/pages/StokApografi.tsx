@@ -9,6 +9,7 @@ import { useSales } from '../hooks/useSales'
 import ItemHistoryModal from '../components/ItemHistoryModal'
 import UploadHistoryPanel from '../components/UploadHistoryPanel'
 import { restoreMasterSnapshot } from '../lib/snapshot'
+import { useYearConfig } from '../hooks/useYearConfig'
 
 interface Props {
   items: InventoryItem[]
@@ -21,6 +22,7 @@ function fmtEur(n: number) {
 }
 
 export default function StokApografi({ items, loading, onRefresh }: Props) {
+  const { newYear, oldYear } = useYearConfig()
   const [supplier, setSupplier] = useState('')
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<FilterStatus>('all')
@@ -244,13 +246,10 @@ export default function StokApografi({ items, loading, onRefresh }: Props) {
     <>
       {/* Stat cards */}
       <div className="cards stagger-children">
-        <StatCard value={fmtEur(stats.tot24)} label="Αξία Αποθ. 2024" color="purple" />
-        <StatCard value={fmtEur(totalExpectedValue)} label="Expected Αξία Αποθ. 2025" color="blue" />
-        <StatCard value={fmtEur(stats.tot25)} label="Actual Αξία Αποθ. 2025" color="purple" />
+        <StatCard value={fmtEur(stats.tot24)} label={`Απογραφή ${oldYear}`} color="purple" />
+        <StatCard value={fmtEur(totalExpectedValue)} label={`Θεωρητική Απογραφή ${newYear}`} color="blue" />
+        <StatCard value={fmtEur(stats.tot25)} label={`Απογραφή ${newYear}`} color="purple" />
         <StatCard value={(globalDiffValue > 0 ? '+' : '') + fmtEur(globalDiffValue)} label="Σύνολο Διαφοράς €" color={globalDiffValue >= 0 ? 'green' : 'red'} />
-        <StatCard value={stats.nChanged.toLocaleString('el-GR')} label="Αλλαγές" color="amber" />
-        <StatCard value={stats.nOnly24.toLocaleString('el-GR')} label="⚠ Απόντα 2025" color="red" />
-        <StatCard value={stats.nOnly25.toLocaleString('el-GR')} label="✦ Νέα 2025" color="green" />
       </div>
 
       {/* Filters */}

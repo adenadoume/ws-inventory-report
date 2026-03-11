@@ -5,6 +5,7 @@ import FiltersBar from '../components/FiltersBar'
 import ItemHistoryModal from '../components/ItemHistoryModal'
 import UploadHistoryPanel from '../components/UploadHistoryPanel'
 import { restoreMasterSnapshot } from '../lib/snapshot'
+import { useYearConfig } from '../hooks/useYearConfig'
 
 interface Props {
   items: InventoryItem[]
@@ -23,6 +24,7 @@ function fmtQty(n: number | null | undefined) {
 }
 
 export default function StokFormula({ items, sales, buys, loading }: Props) {
+  const { newYear, oldYear } = useYearConfig()
   const [supplier, setSupplier] = useState('')
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<FilterStatus>('all')
@@ -86,6 +88,7 @@ export default function StokFormula({ items, sales, buys, loading }: Props) {
   const totalSalesEur = useMemo(() => baseFiltered.reduce((s, i) => s + (i.valSold || 0), 0), [baseFiltered])
   const totalBuysEur = useMemo(() => baseFiltered.reduce((s, i) => s + (i.valBought || 0), 0), [baseFiltered])
   const totalStock24Eur = useMemo(() => baseFiltered.reduce((s, i) => s + (i.cost_2024 || 0), 0), [baseFiltered])
+  const totalStock25Eur = useMemo(() => baseFiltered.reduce((s, i) => s + (i.cost_2025 || 0), 0), [baseFiltered])
 
   // Expected Αξία 2025 & Diff Total: We must iterate over all unique codes across all three feeds.
   const { expectedAxia, diffAxiaTotal } = useMemo(() => {
@@ -215,10 +218,11 @@ export default function StokFormula({ items, sales, buys, loading }: Props) {
     <>
       {/* Stat cards */}
       <div className="cards stagger-children">
-        <StatCard value={fmtEur(totalStock24Eur)} label="Αξία Αποθ. 2024" color="purple" />
+        <StatCard value={fmtEur(totalStock24Eur)} label={`Απογραφή ${oldYear}`} color="purple" />
         <StatCard value={fmtEur(totalSalesEur)} label="Σύνολο Πωλήσεων €" color="red" />
         <StatCard value={fmtEur(totalBuysEur)} label="Σύνολο Αγορών €" color="green" />
-        <StatCard value={fmtEur(expectedAxia)} label="Expected Αξία Αποθ. 2025" color="violet" />
+        <StatCard value={fmtEur(expectedAxia)} label={`Θεωρητική Απογραφή ${newYear}`} color="violet" />
+        <StatCard value={fmtEur(totalStock25Eur)} label={`Απογραφή ${newYear}`} color="purple" />
         <StatCard value={(diffAxiaTotal >= 0 ? '+' : '') + fmtEur(diffAxiaTotal)} label="Σύνολο Διαφοράς €" color={diffAxiaTotal >= 0 ? 'green' : 'red'} />
       </div>
 

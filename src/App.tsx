@@ -5,6 +5,7 @@ import type { TabView } from './types'
 import { useInventory } from './hooks/useInventory'
 import { useSales } from './hooks/useSales'
 import { useBuys } from './hooks/useBuys'
+import { useYearConfig } from './hooks/useYearConfig'
 import Login from './components/Login'
 import StokApografi from './pages/StokApografi'
 import StokFormula from './pages/StokFormula'
@@ -22,6 +23,7 @@ export default function App() {
   const [salesKey, setSalesKey] = useState(0)
   const [buysKey, setBuysKey] = useState(0)
   const [invKey, setInvKey] = useState(0)
+  const { newYear, oldYear } = useYearConfig()
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -45,10 +47,10 @@ export default function App() {
     <div className="app-root">
       <header id="header" className="animate-fade-in">
         <div>
-          <h1>⚖ ΑΠΟΓΡΑΦΗ ΑΠΟΘΕΜΑΤΟΣ — 2024 vs 2025</h1>
+          <h1>⚖ ΑΠΟΓΡΑΦΗ ΑΠΟΘΕΜΑΤΟΣ — {oldYear} vs {newYear}</h1>
           {!invLoading && (
             <div className="sub">
-              Αξία 2024: {fmtEur(tot24)} | Αξία 2025: {fmtEur(tot25)} | Διαφορά: {(diff >= 0 ? '+' : '') + fmtEur(diff)}
+              Αξία {oldYear}: {fmtEur(tot24)} | Αξία {newYear}: {fmtEur(tot25)} | Διαφορά: {(diff >= 0 ? '+' : '') + fmtEur(diff)}
             </div>
           )}
         </div>
